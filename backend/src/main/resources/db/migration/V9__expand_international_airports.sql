@@ -1,0 +1,47 @@
+-- Expansão internacional de aeroportos.
+-- Mantém os aeroportos e as reservas existentes.
+-- Os códigos IATA identificam aeroportos reais.
+
+INSERT INTO airports (iata_code, name, city, country_code)
+VALUES
+    ('KRK', 'John Paul II International Airport Krakow-Balice', 'Krakow', 'PL'),
+    ('GDN', 'Gdansk Lech Walesa Airport', 'Gdansk', 'PL'),
+    ('WRO', 'Wroclaw Copernicus Airport', 'Wroclaw', 'PL'),
+    ('KTW', 'Katowice Airport', 'Katowice', 'PL'),
+    ('BER', 'Berlin Brandenburg Airport', 'Berlin', 'DE'),
+    ('MUC', 'Munich Airport', 'Munich', 'DE'),
+    ('AMS', 'Amsterdam Airport Schiphol', 'Amsterdam', 'NL'),
+    ('BRU', 'Brussels Airport', 'Brussels', 'BE'),
+    ('MAD', 'Adolfo Suarez Madrid-Barajas Airport', 'Madrid', 'ES'),
+    ('BCN', 'Josep Tarradellas Barcelona-El Prat Airport', 'Barcelona', 'ES'),
+    ('FCO', 'Leonardo da Vinci Rome Fiumicino Airport', 'Rome', 'IT'),
+    ('MXP', 'Milan Malpensa Airport', 'Milan', 'IT'),
+    ('VIE', 'Vienna International Airport', 'Vienna', 'AT'),
+    ('PRG', 'Vaclav Havel Airport Prague', 'Prague', 'CZ'),
+    ('BUD', 'Budapest Ferenc Liszt International Airport', 'Budapest', 'HU'),
+    ('ATH', 'Athens International Airport', 'Athens', 'GR'),
+    ('CPH', 'Copenhagen Airport', 'Copenhagen', 'DK'),
+    ('ARN', 'Stockholm Arlanda Airport', 'Stockholm', 'SE'),
+    ('OSL', 'Oslo Airport Gardermoen', 'Oslo', 'NO'),
+    ('HEL', 'Helsinki Airport', 'Helsinki', 'FI'),
+    ('VNO', 'Vilnius Airport', 'Vilnius', 'LT'),
+    ('RIX', 'Riga International Airport', 'Riga', 'LV'),
+    ('TLL', 'Tallinn Airport', 'Tallinn', 'EE'),
+    ('DBV', 'Dubrovnik Airport', 'Dubrovnik', 'HR'),
+    ('TIA', 'Tirana International Airport', 'Tirana', 'AL'),
+    ('IST', 'Istanbul Airport', 'Istanbul', 'TR'),
+    ('AUH', 'Zayed International Airport', 'Abu Dhabi', 'AE'),
+    ('DOH', 'Hamad International Airport', 'Doha', 'QA'),
+    ('NBO', 'Jomo Kenyatta International Airport', 'Nairobi', 'KE'),
+    ('JNB', 'O. R. Tambo International Airport', 'Johannesburg', 'ZA'),
+    ('CPT', 'Cape Town International Airport', 'Cape Town', 'ZA'),
+    ('LOS', 'Murtala Muhammed International Airport', 'Lagos', 'NG'),
+    ('ACC', 'Kotoka International Airport', 'Accra', 'GH'),
+    ('CMN', 'Mohammed V International Airport', 'Casablanca', 'MA'),
+    ('CAI', 'Cairo International Airport', 'Cairo', 'EG'),
+    ('ADD', 'Addis Ababa Bole International Airport', 'Addis Ababa', 'ET'),
+    ('LAD', 'Quatro de Fevereiro International Airport', 'Luanda', 'AO'),
+    ('GRU', 'Sao Paulo Guarulhos International Airport', 'Sao Paulo', 'BR'),
+    ('YYZ', 'Toronto Pearson International Airport', 'Toronto', 'CA'),
+    ('SIN', 'Singapore Changi Airport', 'Singapore', 'SG')
+ON CONFLICT (iata_code) DO NOTHING;
