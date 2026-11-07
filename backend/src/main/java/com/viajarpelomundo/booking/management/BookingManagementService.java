@@ -40,16 +40,30 @@ public class BookingManagementService {
     }
 
     @Transactional(readOnly = true)
-    public List<BookingResponse> mine() {
-        String email = currentEmail();
+    public org.springframework.data.domain.Page<BookingResponse> mine(
+        int page,
+        int size
+    ) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Page must be >= 0 and size must be between 1 and 100"
+            );
+        }
 
-        return bookings.findAll().stream()
-            .filter(booking ->
-                booking.getUser() != null
-                && email.equals(booking.getUser().getEmail())
+        var pageable = org.springframework.data.domain.PageRequest.of(
+            page,
+            size,
+            org.springframework.data.domain.Sort.by(
+                org.springframework.data.domain.Sort.Direction.DESC,
+                "createdAt"
             )
-            .map(BookingResponse::from)
-            .toList();
+        );
+
+        return bookings.findByUser_Email(
+            currentEmail(),
+            pageable
+        ).map(BookingResponse::from);
     }
 
     @Transactional
