@@ -2,10 +2,11 @@ package com.viajarpelomundo.config;
 
 import com.viajarpelomundo.auth.repository.AppUserRepository;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
@@ -44,13 +45,16 @@ public class SecurityConfig {
         throws Exception {
 
         return http
+            .cors(cors -> {})
             // API sem sessões de servidor nesta fase.
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-            // Configuração para testes locais com HTTP Basic.
-            // Antes de publicar, rever CSRF, HTTPS e autenticação.
+
+            // Apenas para o ambiente local de demonstração.
+            // Antes da publicação, implementar autenticação apropriada.
             .csrf(csrf -> csrf.disable())
+
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(
                     HttpMethod.GET,
@@ -66,7 +70,32 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health/**").permitAll()
                 .anyRequest().authenticated()
             )
-            .httpBasic(Customizer.withDefaults())
+
+            // Mantemos HTTP Basic para a demonstração local,
+            // mas sem activar a janela nativa de login do navegador.
+            .httpBasic(basic -> basic
+                .authenticationEntryPoint((request, response, exception) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write(
+                        "{\"status\":401,\"message\":\"Invalid or missing credentials\"}"
+                    );
+                })
+            )
+
+            // Resposta consistente quando o acesso é negado.
+            .exceptionHandling(exceptions -> exceptions
+                .accessDeniedHandler((request, response, exception) -> {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write(
+                        "{\"status\":403,\"message\":\"Access denied\"}"
+                    );
+                })
+            )
+
             .build();
     }
 }

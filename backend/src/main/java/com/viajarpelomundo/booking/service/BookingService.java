@@ -5,22 +5,20 @@ import com.viajarpelomundo.booking.dto.BookingRequest;
 import com.viajarpelomundo.booking.dto.BookingResponse;
 import com.viajarpelomundo.booking.entity.Booking;
 import com.viajarpelomundo.booking.repository.BookingRepository;
+import com.viajarpelomundo.flight.entity.Flight;
 import com.viajarpelomundo.flight.repository.FlightRepository;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
-import org.springframework.security.core.context.SecurityContextHolder;
 
-/**
- * Gere reservas fictícias.
- *
- * A transacção garante que o desconto dos lugares
- * e a criação da reserva acontecem em conjunto.
- */
 @Service
 public class BookingService {
 
@@ -40,56 +38,70 @@ public class BookingService {
 
     @Transactional
     public BookingResponse create(BookingRequest request) {
-
         if (request == null
             || request.flightId() == null
             || request.passengers() == null
             || request.passengers() < 1
             || request.passengers() > 9) {
-
             throw new ResponseStatusException(
                 HttpStatus.BAD_REQUEST,
                 "Invalid booking request"
             );
         }
 
-        // Actualização atómica: só desconta se houver lugares suficientes.
-        int updated = flights.reserveSeats(
-            request.flightId(),
-            request.passengers()
-        );
+        Long outboundId = request.flightId();
+        Long returnId = request.returnFlightId();
+        int passengers = request.passengers();
 
-        if (updated == 0) {
-            if (!flights.existsById(request.flightId())) {
-                throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Flight not found"
-                );
-            }
-
+        if (returnId != null && outboundId.equals(returnId)) {
             throw new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "Flight unavailable or insufficient seats"
+                HttpStatus.BAD_REQUEST,
+                "Outbound and return flights must be different"
             );
         }
 
-        var flight = flights.findById(request.flightId())
-            .orElseThrow();
+        Flight outbound = findFlight(outboundId);
+        Flight inbound = returnId == null ? null : findFlight(returnId);
 
-        var totalPrice = flight.getBasePrice()
-            .multiply(java.math.BigDecimal.valueOf(request.passengers()));
+        if (inbound != null) {
+            validateRoundTrip(outbound, inbound);
+        }
 
-        var booking = new Booking(
-            UUID.randomUUID().toString(),
-            flight,
-            request.passengers(),
-            totalPrice,
-            flight.getCurrency()
+        // Actualizações em ordem estável reduzem deadlocks
+        // quando diferentes utilizadores reservam os mesmos voos.
+        List<Long> flightIds = inbound == null
+            ? List.of(outboundId)
+            : List.of(outboundId, returnId)
+                .stream()
+                .sorted()
+                .toList();
+
+        for (Long flightId : flightIds) {
+            int updated = flights.reserveSeats(flightId, passengers);
+
+            if (updated != 1) {
+                // Esta excepção reverte também os descontos
+                // realizados anteriormente na mesma transacção.
+                throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Flight unavailable or insufficient seats: " + flightId
+                );
+            }
+        }
+
+        BigDecimal totalPrice = outbound.getBasePrice();
+
+        if (inbound != null) {
+            totalPrice = totalPrice.add(inbound.getBasePrice());
+        }
+
+        totalPrice = totalPrice.multiply(
+            BigDecimal.valueOf(passengers)
         );
 
-        // A reserva pertence ao utilizador autenticado.
-        var email = SecurityContextHolder.getContext()
-            .getAuthentication().getName();
+        String email = SecurityContextHolder.getContext()
+            .getAuthentication()
+            .getName();
 
         var user = users.findByEmail(email)
             .orElseThrow(() -> new ResponseStatusException(
@@ -97,15 +109,69 @@ public class BookingService {
                 "User not found"
             ));
 
+        Booking booking = new Booking(
+            UUID.randomUUID().toString(),
+            outbound,
+            inbound,
+            passengers,
+            totalPrice,
+            outbound.getCurrency()
+        );
+
         booking.assignTo(user);
 
         return BookingResponse.from(bookings.save(booking));
     }
 
+    private Flight findFlight(Long id) {
+        return flights.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Flight not found: " + id
+            ));
+    }
+
+    private void validateRoundTrip(Flight outbound, Flight inbound) {
+        String outboundOrigin =
+            outbound.getOriginAirport().getIataCode();
+        String outboundDestination =
+            outbound.getDestinationAirport().getIataCode();
+
+        String returnOrigin =
+            inbound.getOriginAirport().getIataCode();
+        String returnDestination =
+            inbound.getDestinationAirport().getIataCode();
+
+        if (!outboundOrigin.equals(returnDestination)
+            || !outboundDestination.equals(returnOrigin)) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Return flight must reverse the outbound route"
+            );
+        }
+
+        if (!inbound.getDepartureTime().isAfter(
+            outbound.getArrivalTime()
+        )) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Return flight must depart after outbound arrival"
+            );
+        }
+
+        if (!outbound.getCurrency().equals(inbound.getCurrency())) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Both flights must use the same currency"
+            );
+        }
+    }
+
     @Transactional(readOnly = true)
     public BookingResponse findByReference(String reference) {
-        var email = SecurityContextHolder.getContext()
-            .getAuthentication().getName();
+        String email = SecurityContextHolder.getContext()
+            .getAuthentication()
+            .getName();
 
         return bookings.findByReferenceAndUser_Email(reference, email)
             .map(BookingResponse::from)

@@ -149,6 +149,9 @@ export const translations = {
       },
       footer: {
         tagline: 'Explore more. Discover the world.',
+        description: 'An independent full-stack travel platform showcasing modern software engineering, thoughtful design and intuitive travel experiences.',
+        author: 'Designed, developed & engineered by Samuel Texa.',
+        copyright: 'All rights reserved.',
         disclaimer: 'Portfolio demonstration. Flights and payments are simulated.',
       },
     },
@@ -299,6 +302,9 @@ export const translations = {
       },
       footer: {
         tagline: 'Odkrywaj więcej. Poznawaj świat.',
+        description: 'Niezależna platforma podróżnicza full-stack prezentująca nowoczesną inżynierię oprogramowania, przemyślany projekt i intuicyjne rozwiązania dla podróżnych.',
+        author: 'Zaprojektowane i opracowane przez Samuela Texę.',
+        copyright: 'Wszelkie prawa zastrzeżone.',
         disclaimer: 'Projekt demonstracyjny. Loty i płatności są symulowane.',
       },
     },
@@ -315,7 +321,7 @@ const savedLanguage = (() => {
 
 void i18n.use(initReactI18next).init({
   resources: { ...translations, pt },
-  lng: savedLanguage,
+  lng: savedLanguage ?? 'en',
   fallbackLng: 'en',
   supportedLngs: ['en', 'pt', 'pl'],
   interpolation: { escapeValue: false },

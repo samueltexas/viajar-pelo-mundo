@@ -338,3 +338,89 @@
     width: min(340px, calc(100vw - 40px));
   }
 }
+
+/* Module 10 — Round-trip booking */
+
+.vpm-return-heading {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(148, 163, 184, .25);
+}
+
+.vpm-trip-summary {
+  margin-top: 24px;
+  padding: 28px;
+  border: 1px solid rgba(190, 151, 75, .35);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, .08);
+}
+
+.vpm-trip-summary h3 {
+  margin: 0 0 22px;
+  color: #14213d;
+  font-size: 1.35rem;
+}
+
+.vpm-summary-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 0;
+  color: #475569;
+}
+
+.vpm-summary-line strong {
+  color: #14213d;
+  white-space: nowrap;
+}
+
+.vpm-summary-total {
+  margin-top: 12px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 1.12rem;
+  font-weight: 700;
+}
+
+.vpm-trip-summary p {
+  margin: 14px 0 20px;
+  color: #64748b;
+  font-size: .88rem;
+}
+
+.vpm-trip-summary > button {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (max-width: 600px) {
+  .vpm-trip-summary {
+    padding: 20px;
+  }
+
+  .vpm-summary-line {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+}
+
+
+/* Professional multilingual footer */
+.site-footer { padding: 52px 0 24px; }
+.footer-inner { align-items: flex-start; gap: 50px; }
+.footer-about { max-width: 520px; }
+.footer-about > p { line-height: 1.7; }
+.footer-tagline, .footer-author { color: #fff !important; font-weight: 700; }
+.footer-details { max-width: 440px; }
+.footer-details small { display: block; margin-top: 12px; line-height: 1.6; }
+.footer-bottom {
+  display: flex; justify-content: space-between; gap: 16px;
+  border-top: 1px solid #29466e; padding-top: 20px;
+  margin-top: 32px; color: #aebed6; font-size: 12px;
+}
+@media (max-width: 800px) {
+  .footer-inner, .footer-bottom { flex-direction: column; align-items: flex-start; }
+}

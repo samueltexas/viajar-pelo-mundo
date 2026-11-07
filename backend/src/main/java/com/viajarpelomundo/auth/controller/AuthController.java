@@ -4,6 +4,7 @@ import com.viajarpelomundo.auth.dto.RegisterRequest;
 import com.viajarpelomundo.auth.dto.UserResponse;
 import com.viajarpelomundo.auth.service.AuthService;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse register(@RequestBody RegisterRequest request) {
+    public UserResponse register(@Valid @RequestBody RegisterRequest request) {
         return service.register(request);
     }
 

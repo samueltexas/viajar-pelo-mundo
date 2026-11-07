@@ -17,3 +17,46 @@ frontend/dist/
 frontend/coverage/
 
 *.log
+
+# Local backups and temporary reviews
+*.bak
+*.backup
+*.before-*
+*.module*.bak
+*-source-review.txt
+*-auth-review.txt
+*-security-review.txt
+*-docker-review.txt
+frontend-customization-review.txt
+
+# Python temporary files
+__pycache__/
+*.pyc
+.venv/
+
+# Local operating-system files
+Thumbs.db
+
+# Java and frontend build artifacts
+**/target/
+**/node_modules/
+**/dist/
+**/coverage/
+
+# IDE and editor caches
+*.swp
+*.swo
+
+# Temporary project audit reports
+module*-github-audit.txt
+module*-audit.txt
+booking-*-debug.txt
+booking-*-fix.txt
+booking-cancellation-debug.txt
+booking-constructor-fix.txt
+
+# Frontend backup files
+*.backup.tsx
+*.backup.css
+*.backup.ts
+*.backup.js

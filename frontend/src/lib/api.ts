@@ -21,6 +21,8 @@ export type Booking = {
   reference: string
   flightId: number
   flightNumber: string
+  returnFlightId: number | null
+  returnFlightNumber: string | null
   passengers: number
   totalPrice: number
   currency: string
@@ -51,7 +53,9 @@ export async function api<T>(
     headers.set('Content-Type', 'application/json')
   }
 
-  const response = await fetch(`/api/v1${path}`, {
+  const response = await fetch(
+    `${import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? ''}/api/v1${path}`,
+    {
     ...options,
     headers,
     cache: 'no-store',

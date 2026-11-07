@@ -1,0 +1,47 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/viajarpelomundo
+      SPRING_DATASOURCE_USERNAME: viajarpelomundo
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Required}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Required}
+      SERVER_PORT: "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - default
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8088:80"
+    depends_on:
+      - backend
+    networks:
+      - default
+
+  backend-health:
+    image: busybox:1.37
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - "while true; do sleep 3600; done"
+    depends_on:
+      - backend
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -q -O /dev/null http://backend:8080/actuator/health
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s

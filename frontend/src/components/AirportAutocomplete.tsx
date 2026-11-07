@@ -75,9 +75,6 @@ export default function AirportAutocomplete({
     }
   }, [])
 
-  useEffect(() => {
-    if (!open) setQuery(value)
-  }, [value, open])
 
   const getCountry = (code: string) => {
     try {
@@ -87,8 +84,23 @@ export default function AirportAutocomplete({
     }
   }
 
+  const displayedQuery = open ? query : value
+
   const filtered = useMemo(() => {
-    const term = query.trim().toLocaleLowerCase()
+    const term = displayedQuery.trim().toLocaleLowerCase()
+
+    const displayNames = new Intl.DisplayNames(
+      [locale],
+      { type: 'region' }
+    )
+
+    const countryName = (code: string) => {
+      try {
+        return displayNames.of(code) ?? code
+      } catch {
+        return code
+      }
+    }
 
     return airports
       .filter(airport => airport.iataCode !== excludeCode)
@@ -101,7 +113,7 @@ export default function AirportAutocomplete({
           airport.name,
           airport.city,
           airport.countryCode,
-          getCountry(airport.countryCode),
+          countryName(airport.countryCode),
         ].some(field => field.toLocaleLowerCase().includes(term))
       })
       .sort((a, b) => {
@@ -110,7 +122,7 @@ export default function AirportAutocomplete({
         return aExact - bExact || a.city.localeCompare(b.city)
       })
       .slice(0, 8)
-  }, [airports, query, excludeCode, locale])
+  }, [airports, displayedQuery, excludeCode, locale])
 
   function selectAirport(airport: Airport) {
     onChange(airport.iataCode)
@@ -127,7 +139,7 @@ export default function AirportAutocomplete({
         <MapPin size={17} aria-hidden="true" />
         <input
           id={listId}
-          value={query}
+          value={displayedQuery}
           autoComplete="off"
           role="combobox"
           aria-expanded={open}

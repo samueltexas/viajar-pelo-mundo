@@ -25,6 +25,10 @@ public class Booking {
     @JoinColumn(name = "flight_id", nullable = false)
     private Flight flight;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "return_flight_id")
+    private Flight returnFlight;
+
     // Proprietário da reserva.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
@@ -63,6 +67,18 @@ public class Booking {
         this.status = "CONFIRMED";
     }
 
+    public Booking(
+        String reference,
+        Flight flight,
+        Flight returnFlight,
+        int passengerCount,
+        BigDecimal totalPrice,
+        String currency
+    ) {
+        this(reference, flight, passengerCount, totalPrice, currency);
+        this.returnFlight = returnFlight;
+    }
+
     public void assignTo(AppUser user) {
         this.user = user;
     }
@@ -71,6 +87,7 @@ public class Booking {
     public Long getId() { return id; }
     public String getReference() { return reference; }
     public Flight getFlight() { return flight; }
+    public Flight getReturnFlight() { return returnFlight; }
     public Integer getPassengerCount() { return passengerCount; }
     public BigDecimal getTotalPrice() { return totalPrice; }
     public String getCurrency() { return currency; }

@@ -69,6 +69,11 @@ function App() {
   const [tripType, setTripType] = useState<TripType>('oneway')
 
   const [flights, setFlights] = useState<Flight[]>([])
+  const [returnFlights, setReturnFlights] = useState<Flight[]>([])
+  const [selectedOutbound, setSelectedOutbound] = useState<Flight | null>(null)
+  const [selectedReturn, setSelectedReturn] = useState<Flight | null>(null)
+  const [searchedTripType, setSearchedTripType] = useState<TripType>('oneway')
+  const [bookingPassengers, setBookingPassengers] = useState(1)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [selectedBooking, setSelectedBooking] = useState<string | null>(null)
   const [paymentStatuses, setPaymentStatuses] = useState<Record<string, string>>({})
@@ -106,27 +111,58 @@ function App() {
 
   async function searchFlights(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault()
-    setLoading(true)
     setMessage('')
 
-    try {
-      const query = new URLSearchParams({
-        origin: origin.trim().toUpperCase(),
-        destination: destination.trim().toUpperCase(),
-        date: departure,
-        passengers: String(passengers),
-        size: '50',
-      })
+    const from = origin.trim().toUpperCase()
+    const to = destination.trim().toUpperCase()
 
-      const result = await api<Page<Flight>>(`/flights?${query}`)
-      setFlights(result.content)
+    if (!from || !to || from === to) {
+      setMessage(tripText.invalidRoute)
+      return
+    }
+
+    if (tripType === 'roundtrip' &&
+        (!returnDate || returnDate < departure)) {
+      setMessage(tripText.invalidReturn)
+      return
+    }
+
+    setLoading(true)
+    setSelectedOutbound(null)
+    setSelectedReturn(null)
+
+    try {
+      const makeQuery = (fromCode: string, toCode: string, date: string) =>
+        new URLSearchParams({
+          origin: fromCode,
+          destination: toCode,
+          date,
+          passengers: String(passengers),
+          size: '100',
+        })
+
+      const outboundQuery = makeQuery(from, to, departure)
+
+      const [outbound, inbound] = await Promise.all([
+        api<Page<Flight>>(`/flights?${outboundQuery}`),
+        tripType === 'roundtrip'
+          ? api<Page<Flight>>(
+              `/flights?${makeQuery(to, from, returnDate)}`
+            )
+          : Promise.resolve(null),
+      ])
+
+      setFlights(outbound.content)
+      setReturnFlights(inbound?.content ?? [])
+      setSearchedTripType(tripType)
+      setBookingPassengers(passengers)
       setView('results')
 
-      if (tripType === 'roundtrip') {
-        setMessage(t("messages.returnPreview"))
-      } else {
-        setMessage(t("messages.flightsFound", { count: result.totalElements }))
-      }
+      setMessage(
+        tripType === 'roundtrip'
+          ? tripText.bothDirectionsLoaded
+          : t('messages.flightsFound', { count: outbound.totalElements })
+      )
     } catch (error) {
       setMessage((error as Error).message)
     } finally {
@@ -160,7 +196,10 @@ function App() {
     await loadBookings()
   }
 
-  async function bookFlight(flightId: number) {
+  async function bookFlight(
+    flightId: number,
+    returnFlightId?: number,
+  ) {
     if (!credentials) {
       setMessage(t("messages.signInFirst"))
       setView('home')
@@ -175,13 +214,19 @@ function App() {
         '/bookings',
         {
           method: 'POST',
-          body: JSON.stringify({ flightId, passengers }),
+          body: JSON.stringify({
+            flightId,
+            ...(returnFlightId != null ? { returnFlightId } : {}),
+            passengers: bookingPassengers,
+          }),
         },
         credentials,
       )
 
       setMessage(t("messages.bookingCreated", { reference: booking.reference }))
       await loadBookings()
+      setSelectedOutbound(null)
+      setSelectedReturn(null)
       setView('bookings')
     } catch (error) {
       setMessage((error as Error).message)
@@ -259,11 +304,106 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const tripText = ({
+    en: {
+      outbound: 'Outbound flight',
+      inbound: 'Return flight',
+      chooseOutbound: 'Select outbound',
+      chooseReturn: 'Select return',
+      changeOutbound: 'Change outbound',
+      changeReturn: 'Change return',
+      selected: 'Selected',
+      summary: 'Your trip summary',
+      total: 'Total for all passengers',
+      confirm: 'Confirm round-trip booking',
+      oneWay: 'One-way trip',
+      roundTrip: 'Round trip',
+      invalidReturn: 'Choose a return date on or after departure.',
+      invalidRoute: 'Choose two different airports.',
+      bothDirectionsLoaded: 'Flights loaded for both directions.',
+      noReturn: 'No return flights available for this date.',
+      chooseFirst: 'Choose your outbound flight first.',
+      mismatch: 'The selected flights do not form a valid round trip.',
+      currencyMismatch: 'Both flights must use the same currency.',
+      signIn: 'Sign in to confirm your booking.',
+      demo: 'Demo booking — no real payment is charged.',
+    },
+    pt: {
+      outbound: 'Voo de ida',
+      inbound: 'Voo de regresso',
+      chooseOutbound: 'Seleccionar ida',
+      chooseReturn: 'Seleccionar regresso',
+      changeOutbound: 'Alterar ida',
+      changeReturn: 'Alterar regresso',
+      selected: 'Seleccionado',
+      summary: 'Resumo da viagem',
+      total: 'Total para todos os passageiros',
+      confirm: 'Confirmar reserva de ida e volta',
+      oneWay: 'Só ida',
+      roundTrip: 'Ida e volta',
+      invalidReturn: 'Escolhe uma data de regresso igual ou posterior à partida.',
+      invalidRoute: 'Escolhe dois aeroportos diferentes.',
+      bothDirectionsLoaded: 'Voos encontrados nos dois sentidos.',
+      noReturn: 'Não existem voos de regresso para esta data.',
+      chooseFirst: 'Selecciona primeiro o voo de ida.',
+      mismatch: 'Os voos seleccionados não formam uma ida e volta válida.',
+      currencyMismatch: 'Os dois voos devem utilizar a mesma moeda.',
+      signIn: 'Inicia sessão para confirmar a reserva.',
+      demo: 'Reserva demonstrativa — nenhum pagamento real será cobrado.',
+    },
+    pl: {
+      outbound: 'Lot w jedną stronę',
+      inbound: 'Lot powrotny',
+      chooseOutbound: 'Wybierz lot tam',
+      chooseReturn: 'Wybierz lot powrotny',
+      changeOutbound: 'Zmień lot tam',
+      changeReturn: 'Zmień lot powrotny',
+      selected: 'Wybrano',
+      summary: 'Podsumowanie podróży',
+      total: 'Łączna cena dla wszystkich pasażerów',
+      confirm: 'Potwierdź rezerwację w obie strony',
+      oneWay: 'W jedną stronę',
+      roundTrip: 'W obie strony',
+      invalidReturn: 'Wybierz datę powrotu nie wcześniejszą niż wylot.',
+      invalidRoute: 'Wybierz dwa różne lotniska.',
+      bothDirectionsLoaded: 'Znaleziono loty w obu kierunkach.',
+      noReturn: 'Brak lotów powrotnych w wybranym dniu.',
+      chooseFirst: 'Najpierw wybierz lot tam.',
+      mismatch: 'Wybrane loty nie tworzą poprawnej podróży w obie strony.',
+      currencyMismatch: 'Oba loty muszą mieć tę samą walutę.',
+      signIn: 'Zaloguj się, aby potwierdzić rezerwację.',
+      demo: 'Rezerwacja demonstracyjna — bez prawdziwej płatności.',
+    },
+  })[i18n.resolvedLanguage === 'pt'
+    ? 'pt'
+    : i18n.resolvedLanguage === 'pl'
+      ? 'pl'
+      : 'en']
+
   const sortedFlights = [...flights]
     .sort((a, b) => sort === 'price'
       ? a.basePrice - b.basePrice
       : new Date(a.departureTime).getTime() -
         new Date(b.departureTime).getTime())
+
+  const sortedReturnFlights = [...returnFlights].sort((a, b) =>
+    sort === 'price'
+      ? a.basePrice - b.basePrice
+      : new Date(a.departureTime).getTime() -
+        new Date(b.departureTime).getTime()
+  )
+
+  const roundTripValid = selectedOutbound && selectedReturn &&
+    selectedOutbound.origin === selectedReturn.destination &&
+    selectedOutbound.destination === selectedReturn.origin &&
+    new Date(selectedReturn.departureTime).getTime() >
+      new Date(selectedOutbound.arrivalTime).getTime() &&
+    selectedOutbound.currency === selectedReturn.currency
+
+  const roundTripTotal = selectedOutbound && selectedReturn
+    ? (selectedOutbound.basePrice + selectedReturn.basePrice) *
+      bookingPassengers
+    : 0
 
   return (
     <div className="site">
@@ -349,7 +489,7 @@ function App() {
                     checked={tripType === 'roundtrip'}
                     onChange={() => setTripType('roundtrip')}
                   />
-                  {t("search.roundTrip")} <small>{t("search.preview")}</small>
+                  {t("search.roundTrip")}
                 </label>
               </div>
 
@@ -391,8 +531,8 @@ function App() {
 
                 {tripType === 'roundtrip' && (
                   <label className="search-field">
-                    <span>{t("search.return")} {t("search.preview")}</span>
-                    <div><CalendarDays size={17}/><input type="date" min={departure} value={returnDate} onChange={e => setReturnDate(e.target.value)}/></div>
+                    <span>{t("search.return")}</span>
+                    <div><CalendarDays size={17}/><input type="date" min={departure} value={returnDate} onChange={e => setReturnDate(e.target.value)} required/></div>
                   </label>
                 )}
 
@@ -498,7 +638,11 @@ function App() {
 
             <section className="flight-results">
               <div className="results-heading">
-                <h2>{t("results.available", { count: flights.length })}</h2>
+                <h2>
+                  {searchedTripType === 'roundtrip'
+                    ? tripText.outbound
+                    : t("results.available", { count: flights.length })}
+                </h2>
                 <span>{t("results.pricePerPassenger")}</span>
               </div>
 
@@ -520,10 +664,113 @@ function App() {
                   <div className="result-price">
                     <strong>{formatMoney(flight.basePrice, flight.currency, locale)}</strong>
                     <small>{t("results.seats", { count: flight.availableSeats })}</small>
-                    <button className="gold-button" disabled={loading} onClick={() => void bookFlight(flight.id)}>{t("results.select")}</button>
+                    <button
+                      className="gold-button"
+                      disabled={loading || flight.availableSeats < bookingPassengers}
+                      onClick={() => {
+                        if (searchedTripType === 'oneway') {
+                          void bookFlight(flight.id)
+                        } else {
+                          setSelectedOutbound(flight)
+                          setSelectedReturn(null)
+                        }
+                      }}
+                    >
+                      {searchedTripType === 'oneway'
+                        ? t("results.select")
+                        : selectedOutbound?.id === flight.id
+                          ? tripText.selected
+                          : tripText.chooseOutbound}
+                    </button>
                   </div>
                 </article>
               ))}
+
+              {searchedTripType === 'roundtrip' && (
+                <>
+                  <div className="results-heading vpm-return-heading">
+                    <h2>{tripText.inbound}</h2>
+                    <span>{formatDate(returnDate, locale)}</span>
+                  </div>
+
+                  {sortedReturnFlights.length === 0 && (
+                    <div className="empty-card">{tripText.noReturn}</div>
+                  )}
+
+                  {sortedReturnFlights.map(flight => {
+                    const eligible = selectedOutbound != null &&
+                      flight.origin === selectedOutbound.destination &&
+                      flight.destination === selectedOutbound.origin &&
+                      new Date(flight.departureTime).getTime() >
+                        new Date(selectedOutbound.arrivalTime).getTime() &&
+                      flight.currency === selectedOutbound.currency &&
+                      flight.availableSeats >= bookingPassengers
+
+                    return (
+                      <article className="result-card" key={flight.id}>
+                        <div className="airline-details">
+                          <span className="airline-badge"><Plane size={23}/></span>
+                          <div>
+                            <strong>{flight.airlineName || t("results.partnerAirline")}</strong>
+                            <small>{flight.flightNumber}</small>
+                          </div>
+                        </div>
+                        <div className="flight-route">
+                          <div>
+                            <strong>{new Date(flight.departureTime).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</strong>
+                            <small>{flight.origin}</small>
+                          </div>
+                          <div className="route-line"><Plane size={18}/><span>{t("results.flight")}</span></div>
+                          <div>
+                            <strong>{new Date(flight.arrivalTime).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</strong>
+                            <small>{flight.destination}</small>
+                          </div>
+                        </div>
+                        <div className="result-price">
+                          <strong>{formatMoney(flight.basePrice, flight.currency, locale)}</strong>
+                          <small>{t("results.seats", { count: flight.availableSeats })}</small>
+                          <button
+                            className="gold-button"
+                            disabled={loading || !eligible}
+                            onClick={() => setSelectedReturn(flight)}
+                          >
+                            {selectedReturn?.id === flight.id
+                              ? tripText.selected
+                              : tripText.chooseReturn}
+                          </button>
+                        </div>
+                      </article>
+                    )
+                  })}
+
+                  {selectedOutbound && selectedReturn && (
+                    <div className="vpm-trip-summary">
+                      <h3>{tripText.summary}</h3>
+                      <div className="vpm-summary-line">
+                        <span>{tripText.outbound}: {selectedOutbound.flightNumber}</span>
+                        <strong>{formatMoney(selectedOutbound.basePrice * bookingPassengers, selectedOutbound.currency, locale)}</strong>
+                      </div>
+                      <div className="vpm-summary-line">
+                        <span>{tripText.inbound}: {selectedReturn.flightNumber}</span>
+                        <strong>{formatMoney(selectedReturn.basePrice * bookingPassengers, selectedReturn.currency, locale)}</strong>
+                      </div>
+                      <div className="vpm-summary-line vpm-summary-total">
+                        <span>{tripText.total} ({bookingPassengers})</span>
+                        <strong>{formatMoney(roundTripTotal, selectedOutbound.currency, locale)}</strong>
+                      </div>
+                      <p>{tripText.demo}</p>
+                      <button
+                        className="gold-button"
+                        disabled={loading || !roundTripValid}
+                        onClick={() => void bookFlight(selectedOutbound.id, selectedReturn.id)}
+                      >
+                        {tripText.confirm}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
             </section>
           </div>
         </main>
@@ -555,7 +802,11 @@ function App() {
                 <div className="trip-top">
                   <span className="trip-plane"><Plane size={24}/></span>
                   <div className="trip-details">
-                    <h3>{booking.flightNumber}</h3>
+                    <h3>
+                      {booking.flightNumber}
+                      {booking.returnFlightNumber &&
+                        ` · ${booking.returnFlightNumber}`}
+                    </h3>
                     <small>{t("trips.reference", { reference: booking.reference })}</small>
                     <p><UserRound size={15}/> {t("trips.passengers", { count: booking.passengers })} <span>·</span> {formatMoney(booking.totalPrice, booking.currency, locale)}</p>
                   </div>
@@ -600,8 +851,20 @@ function App() {
 
       <footer className="site-footer">
         <div className="container footer-inner">
-          <div><strong>ViajarPelo<span>Mundo</span></strong><p>{t("footer.tagline")}</p></div>
-          <div><p>Java · Spring Boot · PostgreSQL · React · TypeScript</p><small>{t("footer.disclaimer")}</small></div>
+          <div className="footer-about">
+            <strong>ViajarPelo<span>Mundo</span></strong>
+            <p className="footer-tagline">{t('footer.tagline')}</p>
+            <p>{t('footer.description')}</p>
+          </div>
+          <div className="footer-details">
+            <p className="footer-author">{t('footer.author')}</p>
+            <p>Java · Spring Boot · PostgreSQL · React · TypeScript</p>
+            <small>{t('footer.disclaimer')}</small>
+          </div>
+        </div>
+        <div className="container footer-bottom">
+          <span>© {2026} Samuel Texa. {t('footer.copyright')}</span>
+          <span>ViajarPeloMundo</span>
         </div>
       </footer>
     </div>

@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Java 25 - Build and Test
@@ -15,19 +18,19 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_DB: viajarpelomundo
+          POSTGRES_DB: viajarpelomundo_test
           POSTGRES_USER: viajarpelomundo
           POSTGRES_PASSWORD: ci_test_password
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U viajarpelomundo -d viajarpelomundo"
+          --health-cmd "pg_isready -U viajarpelomundo -d viajarpelomundo_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
     env:
-      DB_URL: jdbc:postgresql://localhost:5432/viajarpelomundo
+      DB_URL: jdbc:postgresql://localhost:5432/viajarpelomundo_test
       DB_USERNAME: viajarpelomundo
       DB_PASSWORD: ci_test_password
 
@@ -51,4 +54,8 @@ jobs:
         run: chmod +x mvnw
 
       - name: Run tests
+        env:
+          TEST_DB_URL: jdbc:postgresql://localhost:5432/viajarpelomundo_test
+          TEST_DB_USERNAME: viajarpelomundo
+          TEST_DB_PASSWORD: ci_test_password
         run: ./mvnw --batch-mode verify

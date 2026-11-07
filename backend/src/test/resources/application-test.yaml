@@ -1,0 +1,7 @@
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/viajarpelomundo_test}
+    username: ${TEST_DB_USERNAME:viajarpelomundo}
+    password: ${TEST_DB_PASSWORD}
+  flyway:
+    enabled: true

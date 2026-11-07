@@ -23,11 +23,8 @@ public class BookingManagementController {
     }
 
     @GetMapping("/mine")
-    public org.springframework.data.domain.Page<BookingResponse> mine(
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "20") int size
-    ) {
-        return service.mine(page, size);
+    public List<BookingResponse> mine() {
+        return service.mine();
     }
 
     @PostMapping("/{reference}/cancel")

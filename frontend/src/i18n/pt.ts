@@ -144,6 +144,9 @@ export const pt = {
     },
     footer: {
       tagline: 'Explore mais. Descubra o mundo.',
+      description: 'Uma plataforma de viagens full-stack independente que demonstra engenharia de software moderna, design cuidado e experiências de viagem intuitivas.',
+      author: 'Concebido, desenhado e desenvolvido por Samuel Texa.',
+      copyright: 'Todos os direitos reservados.',
       disclaimer: 'Projecto de demonstração. Os voos e pagamentos são simulados.',
     },
   },

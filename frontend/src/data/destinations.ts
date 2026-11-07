@@ -26,7 +26,7 @@ export const destinations: Destination[] = [
     country: 'Angola',
     code: 'NBJ',
     price: null,
-    image: 'https://images.unsplash.com/photo-1480796927426-f609979314bd?auto=format&fit=crop&w=900&q=85',
+    image: '/images/luanda-bay-ai.webp',
   },
   {
     city: 'Paris',

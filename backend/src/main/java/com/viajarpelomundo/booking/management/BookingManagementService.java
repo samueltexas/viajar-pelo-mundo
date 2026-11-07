@@ -40,30 +40,16 @@ public class BookingManagementService {
     }
 
     @Transactional(readOnly = true)
-    public org.springframework.data.domain.Page<BookingResponse> mine(
-        int page,
-        int size
-    ) {
-        if (page < 0 || size < 1 || size > 100) {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Page must be >= 0 and size must be between 1 and 100"
-            );
-        }
+    public List<BookingResponse> mine() {
+        String email = currentEmail();
 
-        var pageable = org.springframework.data.domain.PageRequest.of(
-            page,
-            size,
-            org.springframework.data.domain.Sort.by(
-                org.springframework.data.domain.Sort.Direction.DESC,
-                "createdAt"
+        return bookings.findAll().stream()
+            .filter(booking ->
+                booking.getUser() != null
+                && email.equals(booking.getUser().getEmail())
             )
-        );
-
-        return bookings.findByUser_Email(
-            currentEmail(),
-            pageable
-        ).map(BookingResponse::from);
+            .map(BookingResponse::from)
+            .toList();
     }
 
     @Transactional
@@ -80,7 +66,7 @@ public class BookingManagementService {
               AND user_id = (
                   SELECT id FROM app_users WHERE email = ?
               )
-            RETURNING id, flight_id, passenger_count
+            RETURNING id, flight_id, return_flight_id, passenger_count
             """, reference, email);
 
         if (changed.isEmpty()) {
@@ -116,6 +102,28 @@ public class BookingManagementService {
             throw new IllegalStateException(
                 "Unable to restore flight seats"
             );
+        }
+
+        // Uma reserva de ida e volta ocupa lugares em dois voos.
+        // Ambos devem ser restaurados na mesma transacção.
+        Object returnFlightValue = row.get("return_flight_id");
+
+        if (returnFlightValue != null) {
+            Long returnFlightId =
+                ((Number) returnFlightValue).longValue();
+
+            int returnRestored = jdbc.update("""
+                UPDATE flights
+                SET available_seats = available_seats + ?
+                WHERE id = ?
+                  AND available_seats + ? <= total_seats
+                """, passengers, returnFlightId, passengers);
+
+            if (returnRestored != 1) {
+                throw new IllegalStateException(
+                    "Unable to restore return flight seats"
+                );
+            }
         }
 
         // Se já houve pagamento fictício, regista reembolso fictício.
@@ -228,11 +236,18 @@ public class BookingManagementService {
         jdbc.execute("SELECT 1");
 
         var row = jdbc.queryForMap("""
-            SELECT b.reference, b.flight_id, f.flight_number,
-                   b.passenger_count, b.total_price,
-                   b.currency, b.status
+            SELECT b.reference,
+                   b.flight_id,
+                   f.flight_number,
+                   b.return_flight_id,
+                   rf.flight_number AS return_flight_number,
+                   b.passenger_count,
+                   b.total_price,
+                   b.currency,
+                   b.status
             FROM bookings b
             JOIN flights f ON f.id = b.flight_id
+            LEFT JOIN flights rf ON rf.id = b.return_flight_id
             JOIN app_users u ON u.id = b.user_id
             WHERE b.reference = ? AND u.email = ?
             """, reference, email);
@@ -241,6 +256,10 @@ public class BookingManagementService {
             (String) row.get("reference"),
             ((Number) row.get("flight_id")).longValue(),
             (String) row.get("flight_number"),
+            row.get("return_flight_id") == null
+                ? null
+                : ((Number) row.get("return_flight_id")).longValue(),
+            (String) row.get("return_flight_number"),
             ((Number) row.get("passenger_count")).intValue(),
             (java.math.BigDecimal) row.get("total_price"),
             (String) row.get("currency"),

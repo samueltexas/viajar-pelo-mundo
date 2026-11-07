@@ -4,6 +4,7 @@ import com.viajarpelomundo.booking.dto.BookingRequest;
 import com.viajarpelomundo.booking.dto.BookingResponse;
 import com.viajarpelomundo.booking.service.BookingService;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,7 @@ public class BookingController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public BookingResponse create(@RequestBody BookingRequest request) {
+    public BookingResponse create(@Valid @RequestBody BookingRequest request) {
         return service.create(request);
     }
 
