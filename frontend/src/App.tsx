@@ -170,20 +170,23 @@ function App() {
     }
   }
 
-  async function loadBookings(auth = credentials) {
-    if (!auth) return
 
-    try {
-      const result = await api<Page<Booking>>(
-        '/bookings/mine?page=0&size=50',
-        {},
-        auth,
-      )
-      setBookings(result.content)
-    } catch (error) {
-      setMessage((error as Error).message)
-    }
+async function loadBookings(auth = credentials) {
+  if (!auth) return
+
+  try {
+    const result = await api<Booking[]>(
+      '/bookings/mine?page=0&size=50',
+      {},
+      auth,
+    )
+
+    setBookings(Array.isArray(result) ? result : [])
+  } catch (error) {
+    setMessage((error as Error).message)
   }
+}
+
 
   async function openBookings() {
     setMobileMenu(false)
