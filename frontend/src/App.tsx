@@ -1,4 +1,5 @@
 import AirportAutocomplete from './components/AirportAutocomplete'
+import PassengerForm from './components/PassengerForm'
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from './components/LanguageSwitcher'
@@ -9,7 +10,7 @@ import {
   LogOut, CreditCard, SlidersHorizontal,
   CheckCircle2, Menu, X, PlaneTakeoff,
 } from 'lucide-react'
-import { api, type Booking, type Credentials, type Flight, type Page } from './lib/api'
+import { api, type Booking, type Credentials, type Flight, type Page, type PassengerDetails } from './lib/api'
 import { destinations } from './data/destinations'
 import './App.css'
 
@@ -74,6 +75,11 @@ function App() {
   const [selectedReturn, setSelectedReturn] = useState<Flight | null>(null)
   const [searchedTripType, setSearchedTripType] = useState<TripType>('oneway')
   const [bookingPassengers, setBookingPassengers] = useState(1)
+  const [checkoutFlightIds, setCheckoutFlightIds] = useState<{
+    outbound: number
+    inbound?: number
+  } | null>(null)
+  const [passengerDetails, setPassengerDetails] = useState<PassengerDetails[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
   const [selectedBooking, setSelectedBooking] = useState<string | null>(null)
   const [paymentStatuses, setPaymentStatuses] = useState<Record<string, string>>({})
@@ -199,6 +205,25 @@ async function loadBookings(auth = credentials) {
     await loadBookings()
   }
 
+  function startCheckout(outbound: number, inbound?: number) {
+    if (!credentials) {
+      setMessage(t("messages.signInFirst"))
+      setView('home')
+      return
+    }
+
+    setPassengerDetails(
+      Array.from({ length: bookingPassengers }, () => ({
+        firstName: '',
+        lastName: '',
+        dateOfBirth: '',
+      }))
+    )
+
+    setCheckoutFlightIds({ outbound, inbound })
+    setMessage('')
+  }
+
   async function bookFlight(
     flightId: number,
     returnFlightId?: number,
@@ -221,6 +246,11 @@ async function loadBookings(auth = credentials) {
             flightId,
             ...(returnFlightId != null ? { returnFlightId } : {}),
             passengers: bookingPassengers,
+            passengerDetails: passengerDetails.map(person => ({
+              firstName: person.firstName.trim(),
+              lastName: person.lastName.trim(),
+              dateOfBirth: person.dateOfBirth,
+            })),
           }),
         },
         credentials,
@@ -230,6 +260,8 @@ async function loadBookings(auth = credentials) {
       await loadBookings()
       setSelectedOutbound(null)
       setSelectedReturn(null)
+      setCheckoutFlightIds(null)
+      setPassengerDetails([])
       setView('bookings')
     } catch (error) {
       setMessage((error as Error).message)
@@ -672,7 +704,7 @@ async function loadBookings(auth = credentials) {
                       disabled={loading || flight.availableSeats < bookingPassengers}
                       onClick={() => {
                         if (searchedTripType === 'oneway') {
-                          void bookFlight(flight.id)
+                          startCheckout(flight.id)
                         } else {
                           setSelectedOutbound(flight)
                           setSelectedReturn(null)
@@ -765,7 +797,7 @@ async function loadBookings(auth = credentials) {
                       <button
                         className="gold-button"
                         disabled={loading || !roundTripValid}
-                        onClick={() => void bookFlight(selectedOutbound.id, selectedReturn.id)}
+                        onClick={() => startCheckout(selectedOutbound.id, selectedReturn.id)}
                       >
                         {tripText.confirm}
                       </button>
@@ -777,6 +809,88 @@ async function loadBookings(auth = credentials) {
             </section>
           </div>
         </main>
+      )}
+
+      {checkoutFlightIds && view === 'results' && (
+        <div className="vpm-checkout-overlay">
+          <form
+            className="vpm-checkout-panel"
+            onSubmit={event => {
+              event.preventDefault()
+              if (loading) return
+
+              const today = new Date().toISOString().slice(0, 10)
+              const valid =
+                passengerDetails.length === bookingPassengers &&
+                passengerDetails.every(person =>
+                  person.firstName.trim() &&
+                  person.lastName.trim() &&
+                  person.dateOfBirth &&
+                  person.dateOfBirth <= today
+                )
+
+              if (!valid) {
+                setMessage(
+                  i18n.resolvedLanguage === 'pt'
+                    ? 'Preenche os dados de todos os passageiros.'
+                    : i18n.resolvedLanguage === 'pl'
+                      ? 'Uzupełnij dane wszystkich pasażerów.'
+                      : 'Complete all passenger details.'
+                )
+                return
+              }
+
+              void bookFlight(
+                checkoutFlightIds.outbound,
+                checkoutFlightIds.inbound
+              )
+            }}
+          >
+            <div className="vpm-checkout-header">
+              <h2>
+                {i18n.resolvedLanguage === 'pt'
+                  ? 'Dados dos passageiros'
+                  : i18n.resolvedLanguage === 'pl'
+                    ? 'Dane pasażerów'
+                    : 'Passenger details'}
+              </h2>
+
+              <button
+                type="button"
+                className="outline-button"
+                disabled={loading}
+                onClick={() => {
+                  setCheckoutFlightIds(null)
+                  setPassengerDetails([])
+                  setMessage('')
+                }}
+                aria-label="Close checkout"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <PassengerForm
+              passengers={passengerDetails}
+              onChange={setPassengerDetails}
+              language={i18n.resolvedLanguage || 'en'}
+            />
+
+            <button
+              type="submit"
+              className="gold-button"
+              disabled={loading}
+            >
+              {loading
+                ? '...'
+                : i18n.resolvedLanguage === 'pt'
+                  ? 'Confirmar reserva'
+                  : i18n.resolvedLanguage === 'pl'
+                    ? 'Potwierdź rezerwację'
+                    : 'Confirm booking'}
+            </button>
+          </form>
+        </div>
       )}
 
       {view === 'bookings' && (

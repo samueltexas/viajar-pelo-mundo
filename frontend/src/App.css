@@ -424,3 +424,89 @@
 @media (max-width: 800px) {
   .footer-inner, .footer-bottom { flex-direction: column; align-items: flex-start; }
 }
+
+/* Checkout de passageiros */
+.vpm-checkout-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(3, 12, 28, 0.78);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-y: auto;
+  padding: 48px 16px;
+}
+
+.vpm-checkout-panel {
+  width: min(100%, 720px);
+  background: #ffffff;
+  color: #14233b;
+  border-radius: 20px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.vpm-checkout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.vpm-checkout-header h2 {
+  margin: 0;
+}
+
+.vpm-passenger-form {
+  display: grid;
+  gap: 20px;
+}
+
+.vpm-passenger-card {
+  border: 1px solid #d9e1ea;
+  border-radius: 14px;
+  padding: 20px;
+  min-width: 0;
+}
+
+.vpm-passenger-card legend {
+  font-weight: 700;
+  padding: 0 8px;
+}
+
+.vpm-passenger-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.vpm-passenger-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.vpm-passenger-grid input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #b9c7d6;
+  border-radius: 8px;
+  background: #fff;
+  color: #14233b;
+  font: inherit;
+}
+
+@media (max-width: 600px) {
+  .vpm-checkout-panel {
+    padding: 20px;
+  }
+
+  .vpm-passenger-grid {
+    grid-template-columns: 1fr;
+  }
+}
