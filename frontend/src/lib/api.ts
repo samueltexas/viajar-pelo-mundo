@@ -17,6 +17,12 @@ export type Flight = {
   availableSeats: number
 }
 
+export type PassengerDetails = {
+  firstName: string
+  lastName: string
+  dateOfBirth: string
+}
+
 export type Booking = {
   reference: string
   flightId: number

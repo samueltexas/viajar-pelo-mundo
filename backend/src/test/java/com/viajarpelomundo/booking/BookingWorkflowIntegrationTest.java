@@ -1,6 +1,8 @@
 package com.viajarpelomundo.booking;
 
 import com.viajarpelomundo.booking.dto.BookingRequest;
+import com.viajarpelomundo.booking.dto.PassengerRequest;
+import java.time.LocalDate;
 import com.viajarpelomundo.booking.service.BookingService;
 import com.viajarpelomundo.booking.management.BookingManagementService;
 
@@ -179,6 +181,13 @@ class BookingWorkflowIntegrationTest {
                     )
                     """, userId);
 
+                jdbc.update("""
+                    DELETE FROM booking_passengers
+                    WHERE booking_id IN (
+                        SELECT id FROM bookings WHERE user_id = ?
+                    )
+                    """, userId);
+
                 jdbc.update(
                     "DELETE FROM bookings WHERE user_id = ?",
                     userId
@@ -208,7 +217,15 @@ class BookingWorkflowIntegrationTest {
     @Test
     void shouldCreateRoundTripWithCorrectPrice() {
         var response = bookingService.create(
-            new BookingRequest(outboundId, returnId, 2)
+            new BookingRequest(
+            outboundId,
+            returnId,
+            2,
+            List.of(
+                new PassengerRequest("Passenger1", "Test", LocalDate.of(1990, 1, 1)),
+                new PassengerRequest("Passenger2", "Test", LocalDate.of(1990, 1, 2))
+            )
+        )
         );
 
         assertEquals("CONFIRMED", response.status());
@@ -237,7 +254,15 @@ class BookingWorkflowIntegrationTest {
         var exception = assertThrows(
             ResponseStatusException.class,
             () -> bookingService.create(
-                new BookingRequest(outboundId, returnId, 2)
+                new BookingRequest(
+            outboundId,
+            returnId,
+            2,
+            List.of(
+                new PassengerRequest("Passenger1", "Test", LocalDate.of(1990, 1, 1)),
+                new PassengerRequest("Passenger2", "Test", LocalDate.of(1990, 1, 2))
+            )
+        )
             )
         );
 
@@ -258,7 +283,15 @@ class BookingWorkflowIntegrationTest {
     @Test
     void shouldCancelRoundTripAndRestoreSeats() {
         var booking = bookingService.create(
-            new BookingRequest(outboundId, returnId, 2)
+            new BookingRequest(
+            outboundId,
+            returnId,
+            2,
+            List.of(
+                new PassengerRequest("Passenger1", "Test", LocalDate.of(1990, 1, 1)),
+                new PassengerRequest("Passenger2", "Test", LocalDate.of(1990, 1, 2))
+            )
+        )
         );
 
         assertEquals(3, seats(outboundId));
@@ -276,7 +309,15 @@ class BookingWorkflowIntegrationTest {
     @Test
     void shouldRejectDuplicateCancellation() {
         var booking = bookingService.create(
-            new BookingRequest(outboundId, returnId, 2)
+            new BookingRequest(
+            outboundId,
+            returnId,
+            2,
+            List.of(
+                new PassengerRequest("Passenger1", "Test", LocalDate.of(1990, 1, 1)),
+                new PassengerRequest("Passenger2", "Test", LocalDate.of(1990, 1, 2))
+            )
+        )
         );
 
         managementService.cancel(booking.reference());
@@ -298,7 +339,15 @@ class BookingWorkflowIntegrationTest {
     @Test
     void shouldProtectBookingFromAnotherUser() {
         var booking = bookingService.create(
-            new BookingRequest(outboundId, returnId, 2)
+            new BookingRequest(
+            outboundId,
+            returnId,
+            2,
+            List.of(
+                new PassengerRequest("Passenger1", "Test", LocalDate.of(1990, 1, 1)),
+                new PassengerRequest("Passenger2", "Test", LocalDate.of(1990, 1, 2))
+            )
+        )
         );
 
         authenticate(otherEmail);
