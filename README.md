@@ -1,5 +1,29 @@
 # ViajarPeloMundo
 
+<!-- LIVE_DEMO_START -->
+## 🌍 Live Demo
+
+**Try ViajarPeloMundo directly in your browser:**
+
+### [🚀 Launch ViajarPeloMundo](https://viajarpelomundo.vercel.app)
+
+ViajarPeloMundo is a full-stack flight booking portfolio project
+built with Java, Spring Boot, React, TypeScript and PostgreSQL.
+
+The application demonstrates flight discovery, booking workflows,
+passenger management, simulated payments and digital tickets.
+
+**No installation is required to explore the frontend.**
+
+> **Deployment note:** The frontend is hosted on Vercel.
+> Features requiring the backend API are available only when
+> the Spring Boot service is deployed and connected.
+
+**Technology Stack:** Java · Spring Boot · React · TypeScript · PostgreSQL · Docker
+
+<!-- LIVE_DEMO_END -->
+
+
 A full-stack travel and flight booking application built with
 Java, Spring Boot, PostgreSQL, React and TypeScript.
 
